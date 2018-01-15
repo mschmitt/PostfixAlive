@@ -100,14 +100,18 @@ function main {
 	if [[ "$PASSEDMINUTES" -lt "$WARNING" ]]
 	then
 		echo "OK Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago."
+		EXITWITH=0
 	elif [[ "$PASSEDMINUTES" -lt "$CRITICAL" ]]
 	then
 		echo "WARN Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago."
+		EXITWITH=1
 	else
 		echo "CRIT Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago."
+		EXITWITH=2
 	fi
 	cat "$OUTFILE"
 	rm "$OUTFILE"
+	exit "$EXITWITH"
 }
 
 function choose_log {
