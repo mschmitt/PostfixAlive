@@ -59,11 +59,16 @@ function main {
 	OUTFILE="$(mktemp)"
 	MAILLOG="$(choose_log)"
 	echo "Using logfile: $MAILLOG" >"$OUTFILE"
+	if [[ -e "$MAILLOG.1" ]]
+	then
+		OLDLOG="$MAILLOG.1"
+		echo "Using old logfile: $MAILLOG.1" >>"$OUTFILE"
+	fi
 	echo MODE=$MODE >>"$OUTFILE"
 	case "$MODE" in
 		'ANY')
 			LASTLINE=$(
-				grep 'status=sent' "$MAILLOG" | 
+				cat "$OLDLOG" "$MAILLOG" | grep 'status=sent' | 
 				tail -n 1
 				)
 			;;
@@ -74,7 +79,7 @@ function main {
 				exit 1
 			fi
 			LASTLINE=$(
-				grep 'status=sent' "$MAILLOG" |
+				cat "$OLDLOG" "$MAILLOG" | grep 'status=sent' | 
 				egrep "relay=$REGEX" |
 				tail -n 1
 				)
@@ -86,7 +91,7 @@ function main {
 				exit 1
 			fi
 			LASTLINE=$(
-				grep 'status=sent' "$MAILLOG" |
+				cat "$OLDLOG" "$MAILLOG" | grep 'status=sent' | 
 				egrep -v "relay=$REGEX\b" |
 				tail -n 1
 				)
