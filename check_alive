@@ -1,0 +1,137 @@
+#!/bin/bash
+
+# check_alive
+# Generates a warning when the last delivery in maillog is longer ago than
+# a given threshold
+# -w warning time (minutes, default 60)
+# -c critical time (minutes, default 180) 
+# -r only check internally relayed mail (optional)
+# -x only check external smtp mail (not internally relayed) (optional)
+# -i Regex: Pattern to identify internal hosts (required with -r or -x)
+# -l Logfile (default: /var/log/maillog, /var/log/mail.log, /var/log/mail.info)
+# -t timezone of time stamps in logfile (optional)
+# 
+# check outbound mail:
+#   check_alive -i 'imap[0-9].local' -x
+# 
+# check relayed mail:
+#   check_alive -i 'imap[0-9].local' -r
+# 
+# check mail delivered locally:
+#   check_alive -i 'dovecot' -r
+#
+# check all mail
+#   check_alive
+
+WARNING=60
+CRITICAL=180
+MODE='ANY'
+TZARG=''
+
+while getopts 'w:c:rxi:l:t:' OPTION
+do
+	case "$OPTION" in
+		'w')	
+			WARNING="$OPTARG"
+			;;
+		'c')
+			CRITICAL="$OPTARG"
+			;;
+		'r')
+			MODE='IN'
+			;;
+		'x')
+			MODE='EX'
+			;;
+		'i')
+			REGEX="$OPTARG"
+			;;
+		'l')
+			LOGFILE="$OPTARG"
+			;;
+		't')
+			TZARG="TZ=\"$OPTARG\""
+			;;
+	esac
+done
+
+function main {
+	OUTFILE="$(mktemp)"
+	MAILLOG="$(choose_log)"
+	echo "Using logfile: $MAILLOG" >"$OUTFILE"
+	echo MODE=$MODE >>"$OUTFILE"
+	case "$MODE" in
+		'ANY')
+			LASTLINE=$(
+				grep 'status=sent' "$MAILLOG" | 
+				tail -n 1
+				)
+			;;
+		'IN')
+			if [[ -z "$REGEX" ]]
+			then
+				echo "Identify inbound relays using -i"
+				exit 1
+			fi
+			LASTLINE=$(
+				grep 'status=sent' "$MAILLOG" |
+				egrep "relay=$REGEX" |
+				tail -n 1
+				)
+			;;
+		'EX')
+			if [[ -z "$REGEX" ]]
+			then
+				echo "Identify inbound relays using -i"
+				exit 1
+			fi
+			LASTLINE=$(
+				grep 'status=sent' "$MAILLOG" |
+				egrep -v "relay=$REGEX\b" |
+				tail -n 1
+				)
+			;;
+	esac
+	echo "$LASTLINE" >>"$OUTFILE"
+	RAWDATE="$(echo $LASTLINE | cut -c 1-15)"
+	EPOCHSECONDS=$(convert_timestamp "$RAWDATE")
+	let PASSEDSECONDS=$(date +%s)-$EPOCHSECONDS
+	let PASSEDMINUTES=$PASSEDSECONDS/60
+	if [[ "$PASSEDMINUTES" -lt "$WARNING" ]]
+	then
+		echo "OK Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago."
+	elif [[ "$PASSEDMINUTES" -lt "$CRITICAL" ]]
+	then
+		echo "WARN Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago."
+	else
+		echo "CRIT Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago."
+	fi
+	cat "$OUTFILE"
+	rm "$OUTFILE"
+}
+
+function choose_log {
+	if [[ "$LOGFILE" ]]
+	then
+		echo "$LOGFILE"
+	elif [[ -e '/var/log/maillog' ]]
+	then
+		echo '/var/log/maillog'
+	elif [[ -e '/var/log/mail.log' ]]
+	then
+		echo '/var/log/mail.log'
+	elif [[ -e '/var/log/mail.info' ]]
+	then
+		echo '/var/log/mail.info'
+	fi
+}
+function convert_timestamp {
+	RAWDATE="$1"
+	echo "Converting timestamp: $RAWDATE" >>"$OUTFILE"
+	LOCALTIME=$(date --date="$TZARG $1") 
+	EPOCHTIME=$(date +%s --date="$TZARG $1") 
+	echo "$LOCALTIME ($EPOCHTIME)" >>"$OUTFILE"
+	echo "$EPOCHTIME"
+}
+
+main
