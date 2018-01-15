@@ -99,14 +99,14 @@ function main {
 	let PASSEDMINUTES=$PASSEDSECONDS/60
 	if [[ "$PASSEDMINUTES" -lt "$WARNING" ]]
 	then
-		echo "OK Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago."
+		echo "OK Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $LASTLINE"
 		EXITWITH=0
 	elif [[ "$PASSEDMINUTES" -lt "$CRITICAL" ]]
 	then
-		echo "WARN Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago."
+		echo "WARN Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $LASTLINE"
 		EXITWITH=1
 	else
-		echo "CRIT Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago."
+		echo "CRIT Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $LASTLINE"
 		EXITWITH=2
 	fi
 	cat "$OUTFILE"
