@@ -98,20 +98,22 @@ function main {
 			;;
 	esac
 	echo "$LASTLINE" >>"$OUTFILE"
+	XXXLINE=$(echo $LASTLINE | perl -pe 's/to=<.*?>,/to=<anonymous\@censored>,/g') 
+	echo "$XXXLINE" >>"$OUTFILE"
 	RAWDATE="$(echo $LASTLINE | cut -c 1-15)"
 	EPOCHSECONDS=$(convert_timestamp "$RAWDATE")
 	let PASSEDSECONDS=$(date +%s)-$EPOCHSECONDS
 	let PASSEDMINUTES=$PASSEDSECONDS/60
 	if [[ "$PASSEDMINUTES" -lt "$WARNING" ]]
 	then
-		echo "OK Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $LASTLINE"
+		echo "OK Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $XXXLINE"
 		EXITWITH=0
 	elif [[ "$PASSEDMINUTES" -lt "$CRITICAL" ]]
 	then
-		echo "WARN Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $LASTLINE"
+		echo "WARN Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $XXXLINE"
 		EXITWITH=1
 	else
-		echo "CRIT Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $LASTLINE"
+		echo "CRIT Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $XXXLINE"
 		EXITWITH=2
 	fi
 	cat "$OUTFILE"
