@@ -123,7 +123,11 @@ function main {
 	EPOCHSECONDS=$(convert_timestamp "$RAWDATE")
 	let PASSEDSECONDS=$(date +%s)-$EPOCHSECONDS
 	let PASSEDMINUTES=$PASSEDSECONDS/60
-	if [[ "$PASSEDMINUTES" -lt "$WARNING" ]]
+	if [[ -z $LASTLINE ]]
+	then
+		echo 'CRIT No log entries found.'
+		EXITWITH=2
+	elif [[ "$PASSEDMINUTES" -lt "$WARNING" ]]
 	then
 		echo "OK Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $LASTLINE"
 		EXITWITH=0
