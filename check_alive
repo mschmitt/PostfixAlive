@@ -10,6 +10,7 @@
 # -i Regex: Pattern to identify internal hosts (required with -r or -x)
 # -l Logfile (default: /var/log/maillog, /var/log/mail.log, /var/log/mail.info)
 # -t timezone of time stamps in logfile (optional)
+# -a anonymize mail addresses in output (optional)
 # 
 # check outbound mail:
 #   check_alive -i 'imap[0-9].local' -x
@@ -27,8 +28,9 @@ WARNING=60
 CRITICAL=180
 MODE='ANY'
 TZARG=''
+ANONYMIZE=0
 
-while getopts 'w:c:rxi:l:t:' OPTION
+while getopts 'w:c:rxi:l:t:a' OPTION
 do
 	case "$OPTION" in
 		'w')	
@@ -51,6 +53,9 @@ do
 			;;
 		't')
 			TZARG="TZ=\"$OPTARG\""
+			;;
+		'a')
+			ANONYMIZE=1
 			;;
 	esac
 done
@@ -97,23 +102,24 @@ function main {
 				)
 			;;
 	esac
-	echo "$LASTLINE" >>"$OUTFILE"
-	XXXLINE=$(echo $LASTLINE | perl -pe 's/to=<.*?>,/to=<anonymous\@censored>,/g') 
-	echo "$XXXLINE" >>"$OUTFILE"
+	if [[ "$ANONYMIZE" -eq 1 ]]
+	then
+		LASTLINE=$(echo $LASTLINE | sed 's/to=[^,]*/to=<***>/g') 
+	fi
 	RAWDATE="$(echo $LASTLINE | cut -c 1-15)"
 	EPOCHSECONDS=$(convert_timestamp "$RAWDATE")
 	let PASSEDSECONDS=$(date +%s)-$EPOCHSECONDS
 	let PASSEDMINUTES=$PASSEDSECONDS/60
 	if [[ "$PASSEDMINUTES" -lt "$WARNING" ]]
 	then
-		echo "OK Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $XXXLINE"
+		echo "OK Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $LASTLINE"
 		EXITWITH=0
 	elif [[ "$PASSEDMINUTES" -lt "$CRITICAL" ]]
 	then
-		echo "WARN Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $XXXLINE"
+		echo "WARN Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $LASTLINE"
 		EXITWITH=1
 	else
-		echo "CRIT Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $XXXLINE"
+		echo "CRIT Last delivery seen $PASSEDMINUTES minutes ($PASSEDSECONDS seconds) ago: $LASTLINE"
 		EXITWITH=2
 	fi
 	cat "$OUTFILE"
