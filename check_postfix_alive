@@ -11,6 +11,7 @@
 # -l Logfile (default: /var/log/maillog, /var/log/mail.log, /var/log/mail.info)
 # -t timezone of time stamps in logfile (optional)
 # -a anonymize mail addresses in output (optional)
+# -p Regex: postfix syslog tag (for multi-instance, default: postfix.*)
 # 
 # check outbound mail:
 #   check_alive -i 'imap[0-9].local' -x
@@ -29,8 +30,9 @@ CRITICAL=180
 MODE='ANY'
 TZARG=''
 ANONYMIZE=0
+LOGTAG='postfix.*'
 
-while getopts 'w:c:rxi:l:t:a' OPTION
+while getopts 'w:c:rxi:l:t:ap:' OPTION
 do
 	case "$OPTION" in
 		'w')	
@@ -57,6 +59,9 @@ do
 		'a')
 			ANONYMIZE=1
 			;;
+		'p')
+			LOGTAG="$OPTARG"
+			;;
 	esac
 done
 
@@ -74,7 +79,7 @@ function main {
 		'ANY')
 			LASTLINE=$(
 				cat "$OLDLOG" "$MAILLOG" | 
-				grep -i postfix |
+				egrep -i "\b$LOGTAG\b" |
 				grep 'status=sent' | 
 				tail -n 1
 				)
@@ -87,7 +92,7 @@ function main {
 			fi
 			LASTLINE=$(
 				cat "$OLDLOG" "$MAILLOG" | 
-				grep -i postfix |
+				egrep -i "\b$LOGTAG\b" |
 				grep 'status=sent' | 
 				egrep "relay=$REGEX" |
 				tail -n 1
@@ -101,7 +106,7 @@ function main {
 			fi
 			LASTLINE=$(
 				cat "$OLDLOG" "$MAILLOG" | 
-				grep -i postfix |
+				egrep -i "\b$LOGTAG\b" |
 				grep 'status=sent' | 
 				egrep -v "relay=$REGEX\b" |
 				tail -n 1
@@ -153,8 +158,8 @@ function choose_log {
 function convert_timestamp {
 	RAWDATE="$1"
 	echo "Converting timestamp: $RAWDATE" >>"$OUTFILE"
-	LOCALTIME=$(date --date="$TZARG $1") 
-	EPOCHTIME=$(date +%s --date="$TZARG $1") 
+	LOCALTIME=$(date --date="$TZARG $RAWDATE") 
+	EPOCHTIME=$(date +%s --date="$TZARG $RAWDATE") 
 	echo "$LOCALTIME ($EPOCHTIME)" >>"$OUTFILE"
 	echo "$EPOCHTIME"
 }
