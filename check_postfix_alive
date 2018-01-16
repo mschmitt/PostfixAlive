@@ -73,7 +73,9 @@ function main {
 	case "$MODE" in
 		'ANY')
 			LASTLINE=$(
-				cat "$OLDLOG" "$MAILLOG" | grep 'status=sent' | 
+				cat "$OLDLOG" "$MAILLOG" | 
+				grep -i postfix |
+				grep 'status=sent' | 
 				tail -n 1
 				)
 			;;
@@ -84,7 +86,9 @@ function main {
 				exit 1
 			fi
 			LASTLINE=$(
-				cat "$OLDLOG" "$MAILLOG" | grep 'status=sent' | 
+				cat "$OLDLOG" "$MAILLOG" | 
+				grep -i postfix |
+				grep 'status=sent' | 
 				egrep "relay=$REGEX" |
 				tail -n 1
 				)
@@ -96,7 +100,9 @@ function main {
 				exit 1
 			fi
 			LASTLINE=$(
-				cat "$OLDLOG" "$MAILLOG" | grep 'status=sent' | 
+				cat "$OLDLOG" "$MAILLOG" | 
+				grep -i postfix |
+				grep 'status=sent' | 
 				egrep -v "relay=$REGEX\b" |
 				tail -n 1
 				)
