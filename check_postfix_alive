@@ -110,9 +110,11 @@ function main {
 	esac
 	if [[ "$ANONYMIZE" -eq 1 ]]
 	then
-		LASTLINE=$(echo $LASTLINE | sed 's/to=[^,]*/to=<***>/g') 
+		# http://wiki.bash-hackers.org/syntax/pattern
+		shopt -s extglob
+		LASTLINE="${LASTLINE//to=+([^,])/to=<***>}"
 	fi
-	RAWDATE="$(echo $LASTLINE | cut -c 1-15)"
+	RAWDATE="${LASTLINE:0:15}"
 	EPOCHSECONDS=$(convert_timestamp "$RAWDATE")
 	let PASSEDSECONDS=$(date +%s)-$EPOCHSECONDS
 	let PASSEDMINUTES=$PASSEDSECONDS/60
